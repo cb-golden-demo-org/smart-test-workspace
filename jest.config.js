@@ -22,5 +22,15 @@ module.exports = {
     "jest-watch-typeahead/filename",
     "jest-watch-typeahead/testname",
   ],
-  reporters: ["default", "jest-junit"],
+  reporters: [
+    "default",
+    [
+      "jest-junit",
+      {
+        suiteNameTemplate: "{filepath}",
+        classNameTemplate: "{classname}",
+        titleTemplate: "{title}",
+      },
+    ],
+  ],
 };

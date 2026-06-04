@@ -6,12 +6,17 @@ on:
     branches:
       - "**"
   workflow_dispatch:
+  schedule:
+    # Run every 6 hours (00:00, 06:00, 12:00, 18:00 UTC).
+    - cron: 0 0,6,12,18 * * *
 permissions:
   scm-token-own: read
   scm-token-org: read
   id-token: write
 jobs:
   test:
+    env:
+      SMART_TESTS_TOKEN: ${{ secrets.SMART_TESTS_TOKEN }}
     steps:
       - name: Run Jenkins Job
         kind: test
@@ -37,14 +42,49 @@ jobs:
       - name: Get source code
         uses: cloudbees-io/checkout@v1
         continue-on-error: true
+        with:
+          fetch-depth: "0"
+      - name: Verify Smart Tests setup
+        uses: docker://cloudbees/smart-tests-cli
+        run: smart-tests verify
+      - name: Record build
+        uses: docker://cloudbees/smart-tests-cli
+        run: |
+          smart-tests record build \
+            --build "${{ cloudbees.run_id }}" \
+            --source src=.
+      - name: Record test session
+        uses: docker://cloudbees/smart-tests-cli
+        run: |
+          smart-tests record session \
+            --build "${{ cloudbees.run_id }}" \
+            --test-suite unit-test > .smart-tests-session
+      - name: Install dependencies and list tests
+        uses: docker://node:lts
+        run: |
+          npm ci
+          npx jest --listTests > test_list.txt
+      - name: Request test subset
+        uses: docker://cloudbees/smart-tests-cli
+        run: |
+          cat test_list.txt | smart-tests subset jest \
+            --session $(cat .smart-tests-session) \
+            --target 50% \
+            --base $(pwd) \
+            > smart-tests-subset.txt
       - name: Run unit tests
         kind: test
         id: RunUnitTest
         uses: docker://node:lts
         run: |
-          npm ci
-          npm run test:unit
-          npx jest --coverage >> $CLOUDBEES_OUTPUTS/CODE_COVERAGE
+          npx jest $(cat smart-tests-subset.txt) --coverage >> $CLOUDBEES_OUTPUTS/CODE_COVERAGE
+      - name: Record test results to Smart Tests
+        uses: docker://cloudbees/smart-tests-cli
+        if: always()
+        run: |
+          smart-tests record tests jest \
+            --session $(cat .smart-tests-session) \
+            junit.xml
       - name: Publish test results
         uses: cloudbees-io/publish-test-results@v1
         with:
