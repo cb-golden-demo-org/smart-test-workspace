@@ -56,9 +56,15 @@ jobs:
       - name: Record test session
         uses: docker://cloudbees/smart-tests-cli
         run: |
+          # Observation mode: --observation records this as an observation
+          # session, so the subset below returns ALL tests (the full suite
+          # still runs) while Smart Tests reports what a subset would have
+          # done for comparison against the confidence curve. Remove
+          # --observation to switch to active subsetting.
           smart-tests record session \
             --build "${{ cloudbees.run_id }}" \
-            --test-suite unit-test > .smart-tests-session
+            --test-suite unit-test \
+            --observation > .smart-tests-session
       - name: Install dependencies and list tests
         uses: docker://node:lts
         run: |
