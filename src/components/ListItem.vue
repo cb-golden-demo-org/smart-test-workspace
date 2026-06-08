@@ -5,7 +5,7 @@
         <p>
           <a :href="link"><strong>{{ title }}</strong></a>
           <br>
-          Submitted by <a :href="`https://news.ycombinator.com/user?id=${user}`">{{user}}</a> 2 hours ago | <a
+          Submitted by <a :href="`https://news.ycombinator.com/profile?id=${user}`">{{user}}</a> 2 hours ago | <a
           :href="comment_link">{{ comment_count }} comments</a>
         </p>
       </div>
