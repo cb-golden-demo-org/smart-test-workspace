@@ -11,15 +11,22 @@
 //
 //   for i in $(seq 1 10); do npx jest flaky; done
 //
-describe("flaky tests (demo)", () => {
-  // One 50/50 draw per test-file execution drives both assertions below.
-  const serviceAvailable = Math.random() < 0.5;
+// Retry each failed test up to 5 times before reporting failure. The draw is
+// re-evaluated on every attempt (inside each test), so retries genuinely cut
+// the per-test failure rate from ~50% toward 0.5^6 (~1.6%). Must be called at
+// the top level and requires the default jest-circus runner.
+jest.retryTimes(5, { logErrorsBeforeRetry: true });
 
+describe("flaky tests (demo)", () => {
+  // A fresh 50/50 draw per attempt — required for retries to change the
+  // outcome. (A single module-level draw would stay fixed across retries.)
   it("flaky-test-reads-from-flaky-service", () => {
+    const serviceAvailable = Math.random() < 0.5;
     expect(serviceAvailable).toBe(true);
   });
 
   it("flaky-test-writes-to-flaky-service", () => {
+    const serviceAvailable = Math.random() < 0.5;
     expect(serviceAvailable).toBe(true);
   });
 });
